@@ -1,0 +1,240 @@
+---
+title: "Assessment 1"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+(a) Start by simulating a (complete) dataset of size 500 on (Y1, Y2). Then, and considering a = 2 and b = 0, simulate the corresponding observed dataset (by imposing missingness on Y2 as instructed above). Is this mechanism MCAR, MAR, or MNAR? Display the marginal distribution of Y2 for the complete (as originally simulated) and observed (after imposing missingness) data. Comment. (10 marks)
+```{r}
+nsim <- 500
+Y <- array(0,c(nsim, 2))
+set.seed(1)
+z1 <- rnorm(nsim,0,1)
+z2 <- rnorm(nsim,0,1)
+z3 <- rnorm(nsim,0,1)
+Y[,1] <- 1 + z1
+Y[,2] <- 5 + 2 * z1 + z2
+a <- 2
+b <- 0
+Y2_miss <- rep(0,nsim)
+for (i in 1:nsim){
+  if (a*(Y[i,1]-1) + b*(Y[i,2]-5) + z3[i] < 0)
+    Y2_miss[i] <- NA
+  else
+    Y2_miss[i] <- Y[i,2]
+}
+par(mfrow = c(1,2))
+plot(density(Y[,2]), main = "Y2 complete")
+abline(v = mean(Y[,2]))
+plot(density(Y2_miss, na.rm = TRUE), main = "Y2 observed")
+abline(v = mean(Y2_miss, na.rm = TRUE))
+```
+
+(b) For the observed dataset simulated in (a), impute the missing values using stochastic regression imputation. Display the marginal distribution of Y2 for the complete (as originally simulated) and completed (after imputation) data. Comment. (5 marks)
+```{r}
+fit <- lm(Y2_miss ~ Y[,1])
+summary(fit)
+coef(fit)
+set.seed(1)
+pred <- predict(fit, newdata = as.data.frame(Y[,1])) + rnorm(nsim, 0, sigma(fit))
+sri = rep(0,nsim)
+for (i in 1:nsim){
+  if (is.na(Y2_miss[i]) == TRUE)
+    sri[i] = pred[i]
+  else
+    sri[i] = Y2_miss[i]
+}
+par(mfrow = c(1,2))
+plot(density(Y[,2]), main = "Y2 complete")
+abline(v = mean(Y[,2]))
+plot(density(sri, na.rm = TRUE), main = "Y2 observed")
+abline(v = mean(sri, na.rm = TRUE))
+```
+
+
+(c) Using the complete dataset simulated in (a), now impose missingness on Y2 by considering a = 0 and b = 2. Is this mechanism MCAR, MAR, or MNAR? Display the marginal distribution of Y2 for the complete (as originally simulated) and observed (after imposing missingness) data. Comment. (10 marks)
+```{r}
+a <- 0
+b <- 2
+Y2_miss2 <- rep(0,nsim)
+for (i in 1:nsim){
+  if (a*(Y[i,1]-1) + b*(Y[i,2]-5) + z3[i] < 0)
+    Y2_miss2[i] <- NA
+  else
+    Y2_miss2[i] <- Y[i,2]
+}
+par(mfrow = c(1,2))
+plot(density(Y[,2]), main = "Y2 complete")
+abline(v = mean(Y[,2]))
+plot(density(Y2_miss2, na.rm = TRUE), main = "Y2 observed")
+abline(v = mean(Y2_miss2, na.rm = TRUE))
+
+```
+
+
+(d) The same as in (b) but for the observed data generated in (c). (5 marks)
+```{r}
+fit2 <- lm(Y2_miss2 ~ Y[,1])
+summary(fit2)
+coef(fit2)
+set.seed(1)
+pred2 <- predict(fit2, newdata = as.data.frame(Y[,1])) + rnorm(nsim, 0, sigma(fit2))
+sri2 = rep(0,nsim)
+for (i in 1:nsim){
+  if (is.na(Y2_miss2[i]) == TRUE)
+    sri2[i] = pred2[i]
+  else
+    sri2[i] = Y2_miss2[i]
+}
+par(mfrow = c(1,2))
+plot(density(Y[,2]), main = "Y2 complete")
+abline(v = mean(Y[,2]))
+plot(density(sri2, na.rm = TRUE), main = "Y2 observed")
+abline(v = mean(sri2, na.rm = TRUE))
+
+
+```
+
+
+ It is sometimes necessary to lower a patient’s blood pressure during surgery, using a hypotensive drug. Such drugs are administrated continuously during the relevant phase of the operation; because the duration of this phase varies, so does the total amount of drug administered. Patients also vary in the extent to which the drugs succeed in lowering blood pressure. The sooner the blood pressure rises again to normal after the drug is discontinued, the better. The dataset databp.Rdata available on Learn, a partial missing value version of the data presented by Robertson and Armitage (1959), relate to a particular hypotensive drug and give the time in minutes before the patient’s systolic blood pressure returned to 1000mm of mercury (the recovery time), the logarithm (base 10) of the dose of drug in milligrams (you can use this variable as is, no need to transform it to the original scale), and the average systolic blood pressure achieved while the drug was being administered.
+ 
+ 
+```{r}
+load("databp.Rdata")
+databp
+```
+
+
+(a) Carry out a complete case analysis to find the mean value of the recovery time (and associated standard error) and to find also the (Pearson) correlations between the recovery time and the dose and between the recovery time and blood pressure. (5 marks)
+```{r}
+ind <- which(is.na(databp$recovtime) == FALSE) #indices of subjects with recovtime observed
+cca_mean <- mean(databp$recovtime, na.rm = TRUE)
+cca_se <- sd(databp$recovtime, na.rm = TRUE)/sqrt(length(ind))
+cca_mean; cca_se
+```
+
+
+```{r}
+cca_cor_r_d <- cor(databp$recovtime, databp$logdose, use = "na.or.complete")
+cca_cor_r_b <- cor(databp$recovtime, databp$bloodp, use = "na.or.complete")
+cca_cor_r_d; cca_cor_r_b
+```
+
+
+(b) The same as in (a) but using mean imputation. (5 marks)
+```{r}
+mi_bp <- ifelse(is.na(databp$recovtime) == TRUE, mean(databp$recovtime, na.rm = TRUE), databp$recovtime)  
+
+n <- length(mi_bp)
+mi_mean <- mean(mi_bp)
+mi_se <- sd(mi_bp)/sqrt(n)
+mi_mean; mi_se
+```
+
+
+```{r}
+mi_cor_r_d <- cor(mi_bp, databp$logdose)
+mi_cor_r_b <- cor(mi_bp, databp$bloodp)
+mi_cor_r_d; mi_cor_r_b
+```
+
+
+(c) The same as in (a) but using mean regression imputation. (5 marks)
+```{r}
+fit_bp <- lm(recovtime ~ logdose + bloodp, data = databp)
+summary(fit_bp)
+coef(fit_bp)
+```
+
+
+```{r}
+ri_bp = rep(0,n)
+pred_ri <- predict(fit_bp, newdata = databp)
+for (i in 1:n){
+  if (is.na(databp$recovtime[i]) == TRUE)
+    ri_bp[i] = pred_ri[i]
+  else
+    ri_bp[i] = databp$recovtime[i]
+}
+ri_mean <- mean(ri_bp)
+ri_se <- sd(ri_bp)/sqrt(n)
+ri_mean; ri_se
+```
+
+
+```{r}
+ri_cor_r_d <- cor(ri_bp, databp$logdose)
+ri_cor_r_b <- cor(ri_bp, databp$bloodp)
+ri_cor_r_d; ri_cor_r_b
+```
+
+
+```{r}
+plot(fit_bp$fitted.values, residuals(fit_bp), xlab = "Fitted values", ylab = "Residuals")
+qqnorm(rstandard(fit_bp), xlim = c(-3, 3), ylim = c(-3, 3))
+qqline(rstandard(fit_bp), col = 2)
+```
+
+
+(d) The same as in (a) but using stochastic regression imputation. Do you need any extra
+care when conducting stochastic regression imputation in this example? (5 marks)
+```{r}
+set.seed(1)
+pred_sri <- predict(fit_bp, newdata = databp) + rnorm(n, 0, sigma(fit_bp))
+sri_bp = rep(0,n)
+for (i in 1:n){
+  if (is.na(databp$recovtime[i]) == TRUE)
+    sri_bp[i] = pred_sri[i]
+  else
+    sri_bp[i] = databp$recovtime[i]
+}
+sri_mean <- mean(sri_bp)
+sri_se <- sd(sri_bp)/sqrt(n)
+sri_mean; sri_se
+```
+
+
+```{r}
+sri_cor_r_d <- cor(sri_bp, databp$logdose)
+sri_cor_r_b <- cor(sri_bp, databp$bloodp)
+sri_cor_r_d; sri_cor_r_b
+```
+
+
+(e) You will now conduct the same analysis but applying another technique called predictive
+mean matching (Little, 1988), which is a special type of hot deck imputation. In the
+simplest form of this method (and the one you will use here), a regression model is used
+to predict the variables with missing values from the other (complete) variables. For
+each subject with a missing value, the donor is chosen to be the subject with a predicted
+value of her or his own that is closest (to be measured by the squared difference) to the
+prediction for the subject with the missing value. (20 marks)
+```{r}
+ind_miss <- which(is.na(databp$recovtime == TRUE))
+dis <- rep(Inf, length(ind_miss))
+donor <- rep(0, length(ind_miss))
+for (i in 1:length(ind_miss)){
+  for (j in 1:length(ind)){
+    if ((pred_ri[ind_miss[i]]-pred_ri[ind[j]])^2 < dis[i]){
+      dis[i] <- (pred_ri[ind_miss[i]]-pred_ri[ind[j]])^2
+      donor[i] <- ind[j]
+    }
+  }
+}
+
+pmm_bp <- rep(0, n)
+for (i in 1:length(ind_miss)){
+  pmm_bp[ind_miss[i]] <- pred_ri[donor[i]]
+}
+pmm_bp <- ifelse(pmm_bp == 0, pred_ri, pmm_bp)
+pmm_mean <- mean(pmm_bp)
+pmm_se <- sd(pmm_bp)/sqrt(n)
+pmm_mean; pmm_se
+```
+
+
+```{r}
+pmm_cor_r_d <- cor(pmm_bp, databp$logdose)
+pmm_cor_r_b <- cor(pmm_bp, databp$bloodp)
+pmm_cor_r_d; pmm_cor_r_b
+```
